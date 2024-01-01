@@ -7,6 +7,7 @@ const express_1 = __importDefault(require("express"));
 const AuthController_1 = require("../controllers/AuthController");
 const express_validator_1 = require("express-validator");
 const User_1 = __importDefault(require("../models/User"));
+const authMiddleware_1 = __importDefault(require("../middlewares/authMiddleware"));
 const router = express_1.default.Router();
 router.put('/signup', [
     (0, express_validator_1.body)('email')
@@ -25,5 +26,14 @@ router.put('/signup', [
     }),
     (0, express_validator_1.body)('password').notEmpty().withMessage('Password must not be empty!'),
 ], AuthController_1.signup);
+router.post('/login', [
+    (0, express_validator_1.body)('email')
+        .trim()
+        .isEmail()
+        .normalizeEmail()
+        .withMessage('Invalid email!'),
+    (0, express_validator_1.body)('password').notEmpty().withMessage('Password must not be empty!'),
+], AuthController_1.login);
+router.put('/edit-profile', authMiddleware_1.default, [(0, express_validator_1.body)('username').notEmpty().withMessage('Username must not be empty!')], AuthController_1.editProfile);
 exports.default = router;
 //# sourceMappingURL=auth_route.js.map
