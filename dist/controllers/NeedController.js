@@ -12,12 +12,13 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.createNeed = exports.findNeed = exports.findNeeds = void 0;
+exports.removeNeed = exports.updateNeed = exports.createNeed = exports.findNeed = exports.findNeeds = void 0;
 const Need_1 = __importDefault(require("../models/Need"));
 const express_validator_1 = require("express-validator");
 const findNeeds = (_req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const needs = Need_1.default.find();
+        const needs = yield Need_1.default.find();
+        console.log(needs);
         res.json({
             isSuccess: true,
             data: needs,
@@ -31,20 +32,42 @@ const findNeeds = (_req, res, next) => __awaiter(void 0, void 0, void 0, functio
 exports.findNeeds = findNeeds;
 const findNeed = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const need = Need_1.default.findById(req.params.id);
+        const errors = (0, express_validator_1.validationResult)(req);
+        if (!errors.isEmpty()) {
+            const error = new Error('Validation failed!');
+            error.data = errors.array();
+            error.statusCode = 422;
+            throw error;
+        }
+        const need = yield Need_1.default.findById(req.params.id);
+        if (!need) {
+            const error = new Error('Not Found');
+            error.statusCode = 404;
+            throw error;
+        }
         res.json({
             isSuccess: true,
             data: need,
             status: 1,
         });
     }
-    catch (error) {
-        next(error);
+    catch (err) {
+        if (!err.statusCode) {
+            err.statusCode = 500;
+        }
+        next(err);
     }
 });
 exports.findNeed = findNeed;
 const createNeed = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     try {
+        const errors = (0, express_validator_1.validationResult)(req);
+        if (!errors.isEmpty()) {
+            const error = new Error('Validation failed!');
+            error.data = errors.array();
+            error.statusCode = 422;
+            throw error;
+        }
         const needDto = {
             body: req.body.body,
             header: req.body.header,
@@ -61,13 +84,6 @@ const createNeed = (req, res, next) => __awaiter(void 0, void 0, void 0, functio
         });
     }
     catch (err) {
-        const errors = (0, express_validator_1.validationResult)(req);
-        if (!errors.isEmpty()) {
-            const error = new Error('Validation failed');
-            error.data = errors.array();
-            error.statusCode = 422;
-            throw error;
-        }
         if (!err.statusCode) {
             err.statusCode = 500;
         }
@@ -75,4 +91,62 @@ const createNeed = (req, res, next) => __awaiter(void 0, void 0, void 0, functio
     }
 });
 exports.createNeed = createNeed;
+const updateNeed = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const need = yield Need_1.default.findById(req.params.id);
+        if (!need) {
+            const error = new Error('Not Found!');
+            error.statusCode = 404;
+            throw error;
+        }
+        // if (req.userId != need.user) {
+        // 	const error: any = new Error('Unauthorized!');
+        // 	error.statusCode = 401;
+        // 	throw error;
+        // }
+        need.header = req.body.header;
+        need.body = req.body.body;
+        need.tags = req.body.tags;
+        need.status = req.body.status ? 'Satisfied' : 'In progress';
+        const result = yield need.save();
+        res.json({ message: 'Updated Successfully!', data: result, status: 1 });
+    }
+    catch (err) {
+        if (!err.statusCode) {
+            err.statusCode = 500;
+        }
+        next(err);
+    }
+});
+exports.updateNeed = updateNeed;
+const removeNeed = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const errors = (0, express_validator_1.validationResult)(req);
+        if (!errors.isEmpty()) {
+            const error = new Error('Validation failed!');
+            error.data = errors.array();
+            error.statusCode = 422;
+            throw error;
+        }
+        const need = yield Need_1.default.findById(req.params.id);
+        if (!need) {
+            const error = new Error('Not Found!');
+            error.statusCode = 404;
+            throw error;
+        }
+        yield Need_1.default.findByIdAndDelete(req.params.id);
+        console.log('in here delete');
+        res.status(200).json({
+            isSuccess: true,
+            message: 'Need deleted successfully',
+        });
+    }
+    catch (err) {
+        if (!err.statusCode) {
+            err.statusCode = 500;
+        }
+        next(err);
+    }
+});
+exports.removeNeed = removeNeed;
 //# sourceMappingURL=NeedController.js.map
