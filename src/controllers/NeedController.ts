@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import Need from '../models/Need';
 import { validationResult } from 'express-validator';
 import { INeedCreate } from '../interfaces/INeed';
+import User from '../models/User';
 
 export const findNeeds = async (
 	_req: Request,
@@ -10,7 +11,7 @@ export const findNeeds = async (
 ) => {
 	try {
 		const needs = await Need.find();
-		console.log(needs);
+
 		res.json({
 			isSuccess: true,
 			data: needs,
@@ -99,17 +100,25 @@ export const updateNeed = async (
 	next: NextFunction
 ) => {
 	try {
+		const errors = validationResult(req);
+		if (!errors.isEmpty()) {
+			const error: any = new Error('Validation failed!');
+			error.data = errors.array();
+			error.statusCode = 422;
+			throw error;
+		}
 		const need: any = await Need.findById(req.params.id);
+
 		if (!need) {
 			const error: any = new Error('Not Found!');
 			error.statusCode = 404;
 			throw error;
 		}
-		// if (req.userId != need.user) {
-		// 	const error: any = new Error('Unauthorized!');
-		// 	error.statusCode = 401;
-		// 	throw error;
-		// }
+		if (req.userId != need.user) {
+			const error: any = new Error('Unauthorized!');
+			error.statusCode = 401;
+			throw error;
+		}
 		need.header = req.body.header;
 		need.body = req.body.body;
 		need.tags = req.body.tags;
@@ -144,13 +153,18 @@ export const removeNeed = async (
 			error.statusCode = 404;
 			throw error;
 		}
-
+		console.log(req.userId, need.user);
+		if (req.userId != need.user) {
+			const error: any = new Error('Unauthorized!');
+			error.statusCode = 401;
+			throw error;
+		}
 		await Need.findByIdAndDelete(req.params.id);
-		console.log('in here delete');
-		res.status(200).json({
-			isSuccess: true,
-			message: 'Need deleted successfully',
-		});
+		const user: any = await User.findById(req.userId);
+		user.needs.pull(req.params.id);
+		await user.save();
+
+		res.sendStatus(204);
 	} catch (err: any) {
 		if (!err.statusCode) {
 			err.statusCode = 500;

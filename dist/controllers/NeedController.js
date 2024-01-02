@@ -15,10 +15,10 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.removeNeed = exports.updateNeed = exports.createNeed = exports.findNeed = exports.findNeeds = void 0;
 const Need_1 = __importDefault(require("../models/Need"));
 const express_validator_1 = require("express-validator");
+const User_1 = __importDefault(require("../models/User"));
 const findNeeds = (_req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const needs = yield Need_1.default.find();
-        console.log(needs);
         res.json({
             isSuccess: true,
             data: needs,
@@ -93,17 +93,24 @@ const createNeed = (req, res, next) => __awaiter(void 0, void 0, void 0, functio
 exports.createNeed = createNeed;
 const updateNeed = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     try {
+        const errors = (0, express_validator_1.validationResult)(req);
+        if (!errors.isEmpty()) {
+            const error = new Error('Validation failed!');
+            error.data = errors.array();
+            error.statusCode = 422;
+            throw error;
+        }
         const need = yield Need_1.default.findById(req.params.id);
         if (!need) {
             const error = new Error('Not Found!');
             error.statusCode = 404;
             throw error;
         }
-        // if (req.userId != need.user) {
-        // 	const error: any = new Error('Unauthorized!');
-        // 	error.statusCode = 401;
-        // 	throw error;
-        // }
+        if (req.userId != need.user) {
+            const error = new Error('Unauthorized!');
+            error.statusCode = 401;
+            throw error;
+        }
         need.header = req.body.header;
         need.body = req.body.body;
         need.tags = req.body.tags;
@@ -134,12 +141,17 @@ const removeNeed = (req, res, next) => __awaiter(void 0, void 0, void 0, functio
             error.statusCode = 404;
             throw error;
         }
+        console.log(req.userId, need.user);
+        if (req.userId != need.user) {
+            const error = new Error('Unauthorized!');
+            error.statusCode = 401;
+            throw error;
+        }
         yield Need_1.default.findByIdAndDelete(req.params.id);
-        console.log('in here delete');
-        res.status(200).json({
-            isSuccess: true,
-            message: 'Need deleted successfully',
-        });
+        const user = yield User_1.default.findById(req.userId);
+        user.needs.pull(req.params.id);
+        yield user.save();
+        res.sendStatus(204);
     }
     catch (err) {
         if (!err.statusCode) {

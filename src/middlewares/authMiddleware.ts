@@ -22,5 +22,6 @@ export default (req: any, _res: Response, next: NextFunction) => {
 		throw error;
 	}
 	req.userId = decodedToken.userId;
+
 	next();
 };

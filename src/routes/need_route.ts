@@ -7,13 +7,15 @@ import {
 	updateNeed,
 } from '../controllers/NeedController';
 import { body } from 'express-validator';
+import authMiddleware from '../middlewares/authMiddleware';
 
 const router = express.Router();
 
 router
 	.route('/')
-	.get(findNeeds)
+	.get(authMiddleware, findNeeds)
 	.post(
+		authMiddleware,
 		[
 			body('header').notEmpty().withMessage('header must not be empty'),
 			body('body').notEmpty().withMessage('body must not be empty'),
@@ -23,8 +25,9 @@ router
 	);
 router
 	.route('/:id')
-	.get(findNeed)
+	.get(authMiddleware, findNeed)
 	.put(
+		authMiddleware,
 		[
 			body('header').notEmpty().withMessage('header must not be empty'),
 			body('body').notEmpty().withMessage('body must not be empty'),
@@ -33,6 +36,6 @@ router
 		],
 		updateNeed
 	)
-	.delete(removeNeed);
+	.delete(authMiddleware, removeNeed);
 
 export default router;
